@@ -1,3 +1,5 @@
+/* eslint-disable no-unused-vars */
+/* eslint-disable camelcase */
 import React, {
   createContext,
   useCallback,
@@ -8,19 +10,26 @@ import React, {
 import AsyncStorage from '@react-native-community/async-storage';
 import api from '../services/api';
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar_url: string;
+}
+
 interface AuthData {
   token: string;
-  user: object;
+  user: User;
 }
 interface SignInCredentials {
   email: string;
   password: string;
 }
 interface AuthContextData {
-  user: object;
+  user: User;
   signOut(): void;
-  // eslint-disable-next-line no-unused-vars
   signIn(credentials: SignInCredentials): Promise<void>;
+  updateUser(user: User): Promise<void>;
   loading: boolean;
 }
 
@@ -36,11 +45,11 @@ const AuthProvider: React.FC = ({ children }) => {
         'GoBarber:user',
       ]);
       if (token[1] && user[1]) {
+        api.defaults.headers.authorization = `Bearer ${token[1]}`;
         setData({ token: token[1], user: JSON.parse(user[1]) });
       }
       setLoading(false);
     }
-
     loadStorageData();
   }, []);
 
@@ -51,14 +60,29 @@ const AuthProvider: React.FC = ({ children }) => {
       ['GoBarber:token', token],
       ['GoBarber:user', JSON.stringify(user)],
     ]);
+    api.defaults.headers.authorization = `Bearer ${token}`;
+
     setData(response.data);
   }, []);
   const signOut = useCallback(async () => {
     await AsyncStorage.multiRemove(['GoBarber:user', 'GoBarber:token']);
     setData({} as AuthData);
   }, []);
+  const updateUser = useCallback(
+    async (user: User) => {
+      await AsyncStorage.setItem('GoBarber:user', JSON.stringify(user));
+
+      setData({
+        token: data.token,
+        user,
+      });
+    },
+    [data.token],
+  );
   return (
-    <AuthContext.Provider value={{ user: data.user, signIn, signOut, loading }}>
+    <AuthContext.Provider
+      value={{ user: data.user, signIn, signOut, updateUser, loading }}
+    >
       {children}
     </AuthContext.Provider>
   );

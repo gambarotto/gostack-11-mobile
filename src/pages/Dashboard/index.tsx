@@ -1,15 +1,92 @@
-import React from 'react';
-import { Button, View } from 'react-native';
+/* eslint-disable camelcase */
+import { useNavigation } from '@react-navigation/native';
+import React, { useCallback, useEffect, useState } from 'react';
+import Icon from 'react-native-vector-icons/Feather';
 import { useAuth } from '../../hooks/auth';
+import api from '../../services/api';
 
-// import { Container } from './styles';
+import {
+  Container,
+  Header,
+  HeaderTitle,
+  ProfileButton,
+  UserAvatar,
+  UserName,
+  ProvidersList,
+  ProviderContainer,
+  ProviderAvatar,
+  ProviderInfo,
+  ProviderMetaText,
+  ProviderName,
+  ProviderMeta,
+  ProvidersListTitle,
+} from './styles';
+
+export interface Provider {
+  id: string;
+  name: string;
+  avatar_url: string;
+}
 
 const Dashboard: React.FC = () => {
-  const { signOut } = useAuth();
+  const [providers, setProviders] = useState<Provider[]>();
+  const { user } = useAuth();
+  const { navigate } = useNavigation();
+  const navigateToProfile = useCallback(() => {
+    navigate('Profile');
+  }, [navigate]);
+  useEffect(() => {
+    api.get('providers').then((response) => {
+      setProviders(response.data);
+    });
+  }, []);
+  const nagateToCreateAppointment = useCallback(
+    (providerId: string) => {
+      navigate('CreateAppointment', { providerId });
+    },
+    [navigate],
+  );
+
   return (
-    <View>
-      <Button title="Sair" onPress={signOut} />
-    </View>
+    <Container>
+      <Header>
+        <HeaderTitle>
+          Bem vindo, {'\n'}
+          <UserName>{user.name}</UserName>
+        </HeaderTitle>
+        <ProfileButton onPress={navigateToProfile}>
+          <UserAvatar source={{ uri: user.avatar_url }} />
+        </ProfileButton>
+      </Header>
+      <ProvidersList
+        data={providers}
+        keyExtractor={(provider) => provider.id}
+        ListHeaderComponent={
+          <ProvidersListTitle>Cabeleireiros</ProvidersListTitle>
+        }
+        renderItem={({ item: provider }) => (
+          <ProviderContainer
+            onPress={() => nagateToCreateAppointment(provider.id)}
+          >
+            <ProviderAvatar source={{ uri: provider.avatar_url }} />
+
+            <ProviderInfo>
+              <ProviderName>{provider.name}</ProviderName>
+
+              <ProviderMeta>
+                <Icon name="calendar" size={16} color="#ff9000" />
+                <ProviderMetaText>Segunda à sexta</ProviderMetaText>
+              </ProviderMeta>
+
+              <ProviderMeta>
+                <Icon name="clock" size={16} color="#ff9000" />
+                <ProviderMetaText>8h às 18h</ProviderMetaText>
+              </ProviderMeta>
+            </ProviderInfo>
+          </ProviderContainer>
+        )}
+      />
+    </Container>
   );
 };
 
